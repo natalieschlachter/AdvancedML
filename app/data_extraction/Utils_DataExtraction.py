@@ -1,7 +1,6 @@
+# Extraction 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-# Ensure the output directory exists
 os.makedirs(output_dir, exist_ok=True)
 
 # Function to process a single folder
@@ -101,6 +100,7 @@ def process_folders_parallel(dataset_dir, output_dir):
         executor.map(lambda folder: process_folder(folder, dataset_dir, output_dir), folders)
 
 
+# After Extraction - Check
 def analyze_dataset_and_visualize(dataset_path, csv_input_folder):
     jpg_count = 0
     csv_count = 0
@@ -172,4 +172,38 @@ def analyze_dataset_and_visualize(dataset_path, csv_input_folder):
             plt.subplot(1, 10, i + 1)
             plt.imshow(img)
             plt.axis('off')
+        plt.show()
+
+
+def plot_50_random_images_all_groups(dataset_path):
+    jpg_groups = defaultdict(list)
+
+    # Traverse the dataset directory to collect jpg files
+    for root, dirs, files in os.walk(dataset_path):
+        for file in files:
+            if file.endswith('.jpg'):
+                parts = file.split('_')
+                if len(parts) < 2:
+                    print(f"Skipping improperly named file: {file}")
+                    continue
+                group_name = parts[0]  # Extract prefix (e.g., s1)
+                video_number = parts[1]  # Extract video number (e.g., T1)
+
+                jpg_groups[group_name].append((os.path.join(root, file), video_number))
+
+    # Plot 50 random images for each group
+    for group, jpg_files in jpg_groups.items():
+        print(f"Plotting 50 random images for group: {group}")
+        sample_files = random.sample(jpg_files, min(50, len(jpg_files)))  # Up to 50 random files
+
+        # Plot the images
+        plt.figure(figsize=(25, 15))
+        for i, (file_path, _) in enumerate(sample_files):
+            try:
+                img = Image.open(file_path)
+                plt.subplot(5, 10, i + 1)
+                plt.imshow(img)
+                plt.axis('off')
+            except Exception as e:
+                print(f"Error displaying image {file_path}: {e}")
         plt.show()
