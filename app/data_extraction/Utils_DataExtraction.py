@@ -1,13 +1,4 @@
-import os
-import random
-import cv2
-import pandas as pd
-import numpy as np
-import logging
-from concurrent.futures import ThreadPoolExecutor
-from scipy.interpolate import interp1d
 
-# Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Ensure the output directory exists
@@ -109,3 +100,76 @@ def process_folders_parallel(dataset_dir, output_dir):
     with ThreadPoolExecutor() as executor:
         executor.map(lambda folder: process_folder(folder, dataset_dir, output_dir), folders)
 
+
+def analyze_dataset_and_visualize(dataset_path, csv_input_folder):
+    jpg_count = 0
+    csv_count = 0
+    jpg_groups = defaultdict(list)
+    video_groups = defaultdict(int)
+
+    """
+    This function allows to analyze and visualizes the extracted frames
+    and check whether the output is as expected
+    
+    """
+    # Traverse the dataset directory
+    for root, dirs, files in os.walk(dataset_path):
+        for file in files:
+            if file.endswith('.jpg'):
+                jpg_count += 1
+                parts = file.split('_')
+                group = parts[0]  # Extract prefix (e.g., s1)
+                video_number = parts[1]  # Extract video number (e.g., T1)
+
+                jpg_groups[group].append((os.path.join(root, file), video_number))
+                video_groups[video_number] += 1
+            elif file.endswith('.csv'):
+                csv_count += 1
+
+    total_groups = len(jpg_groups)
+    print(f"\nTotal number of patients: {total_groups}")
+    print(f"\nTotal number of frames: {jpg_count}")
+    print(f"\nNo. of frames/ No. of patients: {jpg_count / total_groups if total_groups > 0 else 'N/A'}")
+    print(f"\nTotal number of .csv files: {csv_count}")
+
+    print(f"\nNumber of frames per video number:")
+    for video_number, count in sorted(video_groups.items()):
+        print(f"  Video {video_number}: {count} .jpg files")
+
+    # Sort groups in ascending order by the number after the 's'
+    sorted_groups = sorted(jpg_groups.keys(), key=lambda x: int(x[1:]))
+
+    # Per-group analysis
+    for group in sorted_groups:
+        jpg_files = jpg_groups[group]
+        video_number = jpg_files[0][1]  # Extract the video number from the first file in the group
+
+        # Build the path to the corresponding CSV file
+        csv_file_path = os.path.join(csv_input_folder, group, f"eda_{group}_{video_number}.csv")
+
+        # Compute the length of the CSV file (considering no header)
+        if os.path.exists(csv_file_path):
+            try:
+                csv_length = len(pd.read_csv(csv_file_path, header=None))  # Read without header
+            except Exception as e:
+                print(f"Error reading {csv_file_path}: {e}")
+                csv_length = "Error reading file"
+        else:
+            csv_length = "File not found"
+
+        # Display group information
+        print(f"\nPatient: {group}; video task: {video_number}")
+        print(f"1. Number of frames extracted: {len(jpg_files)}")
+        print(f"2. Eda signals file: {csv_file_path};  Number of signals: {csv_length}")
+
+        # Display 10 random images
+        print("3. Displaying 10 random images:")
+        sample_files = random.sample(jpg_files, min(10, len(jpg_files)))  # Up to 10 random files
+
+        plt.figure(figsize=(20, 10))
+        for i, (file_path, _) in enumerate(sample_files):
+            img = Image.open(file_path)
+            plt.subplot(1, 10, i + 1)
+            plt.imshow(img)
+            plt.axis('off')
+        plt.show()
