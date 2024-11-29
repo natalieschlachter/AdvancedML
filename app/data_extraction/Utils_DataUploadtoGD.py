@@ -1,10 +1,3 @@
-import os
-from concurrent.futures import ThreadPoolExecutor
-from pydrive.auth import GoogleAuth
-from pydrive.drive import GoogleDrive
-from threading import Lock
-
-
 def authenticate_drive():
     """
     Authenticates and returns the Google Drive instance.
@@ -103,3 +96,5 @@ if __name__ == "__main__":
 
     # Upload the entire folder to Google Drive
     upload_folder_to_drive(dataset_dir, drive, parent_folder_id=dataset_folder_id)
+
+
